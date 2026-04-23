@@ -1,0 +1,55 @@
+name: Buscar autos diariamente
+
+on:
+  schedule:
+    # 09:00 hora Argentina (UTC-3) = 12:00 UTC
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: buscador-autos
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Restaurar historial de autos enviados
+        uses: actions/cache@v4
+        with:
+          path: sent_cars.json
+          key: sent-cars-${{ github.run_id }}
+          restore-keys: |
+            sent-cars-
+
+      - name: Ejecutar buscador
+        env:
+          SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+          SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+          HISTORY_FILE: sent_cars.json
+        run: python buscador_autos.py
+
+      - name: Subir historial como artifact (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sent-cars-${{ github.run_id }}
+          path: sent_cars.json
+          retention-days: 7
+          if-no-files-found: ignore
