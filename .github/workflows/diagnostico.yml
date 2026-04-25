@@ -1,0 +1,44 @@
+name: Diagnóstico de scrapers
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Modelo a diagnosticar (vacío = todos)'
+        required: false
+        default: ''
+      skip_kavak:
+        description: '¿Saltear Kavak?'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: pip install -r requirements.txt
+
+      - name: Correr diagnóstico
+        run: |
+          ARGS=""
+          if [ -n "${{ inputs.model }}" ]; then
+            ARGS="$ARGS --model ${{ inputs.model }}"
+          fi
+          if [ "${{ inputs.skip_kavak }}" = "true" ]; then
+            ARGS="$ARGS --skip-kavak"
+          fi
+          python diagnostico.py $ARGS

@@ -9,8 +9,10 @@ Corre solo todos los días a las **9 AM hora Argentina** usando GitHub Actions �
 ## 📦 Qué hay en este repo
 
 - `buscador_autos.py` — el script principal (scraping + filtrado + scoring + email).
+- `diagnostico.py` — script de diagnóstico para verificar que los scrapers funcionan, sin filtros y sin envío de email.
 - `requirements.txt` — dependencias de Python.
-- `.github/workflows/buscar_autos.yml` — configuración del cron de GitHub Actions.
+- `.github/workflows/buscar_autos.yml` — cron diario.
+- `.github/workflows/diagnostico.yml` — workflow manual para correr el diagnóstico.
 - `README.md` — este archivo.
 
 ---
@@ -76,9 +78,24 @@ Para no repetir autos entre emails, el workflow guarda un historial (`sent_cars.
 
 **Síntoma:** el email llega vacío o con pocos resultados durante varios días seguidos.
 
-**Causa probable:** Mercado Libre o Kavak cambiaron los selectores CSS de sus páginas. Pasa cada tantos meses.
+**Causa probable:** Mercado Libre o Kavak cambiaron los selectores CSS de sus páginas, o el runner de GitHub está siendo bloqueado.
+
+**Cómo verificarlo (sin tocar código):** correr el workflow de diagnóstico.
+
+1. Andá a la pestaña **Actions** del repo.
+2. Clickeá **"Diagnóstico de scrapers"** → **Run workflow**.
+3. Mirá los logs: te va a decir cuántas cards encontró por modelo, cuántas estaban en USD, cuántas se rechazaron y por qué. Si ves `0 cards` significa que ML está sirviendo otro HTML (probablemente captcha o página vacía); si ves `0 listings en USD` significa que están todas en pesos.
+
+También se puede correr localmente:
+```bash
+pip install -r requirements.txt
+python diagnostico.py            # todos los modelos
+python diagnostico.py --model fit  # solo uno
+```
 
 **Cómo arreglarlo:** hay que tocar las funciones `scrape_mercadolibre()` (busca selectores como `li.ui-search-layout__item`) y `scrape_kavak()` dentro de `buscador_autos.py`. Si no te sentís con ganas de tocar el código, pasale el repo y el error a cualquier persona que programe — es un ajuste de 10-30 minutos.
+
+**Nota sobre Kavak:** la web de Kavak es una SPA (se renderiza con JavaScript), así que el scraping pasivo no encuentra autos en el HTML. Por ahora el script depende mayormente de Mercado Libre y deja Kavak como best-effort. Si querés sumar Kavak con resultados, hay que migrar a Playwright (browser headless), que es bastante más laburo.
 
 **Para correrlo localmente** (y ver el output antes de pushear cambios):
 
